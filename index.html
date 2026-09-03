@@ -75,7 +75,17 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
 .mrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
 .mrow span:last-child{font-weight:700;white-space:nowrap}
-.concl{font-size:13.5px;line-height:1.68;color:var(--ink2);white-space:pre-wrap}
+.concl{font-size:14px;line-height:1.72;color:var(--ink2);max-width:78ch}
+.concl p{margin-bottom:13px}
+.concl p:last-child{margin-bottom:0}
+.concl h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);
+  font-weight:600;margin:20px 0 9px}
+.concl h3:first-child{margin-top:0}
+.concl strong{color:var(--ink);font-weight:600}
+.concl ul{list-style:none;margin:4px 0 13px}
+.concl li{position:relative;padding-left:19px;margin-bottom:7px}
+.concl li:before{content:"";position:absolute;left:3px;top:9px;width:5px;height:5px;
+  border-radius:50%;background:var(--acc)}
 
 .org{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px}
 .org:last-child{margin-bottom:0}
@@ -90,7 +100,6 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .orgt .d{font-size:12px;margin-top:3px;font-weight:600}
 
 .empty{color:var(--mut);font-size:13.5px;padding:10px 0;line-height:1.6}
-.foot{text-align:center;color:var(--mut);font-size:12px;margin-top:14px}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}.panels{grid-template-columns:1fr}.mgrid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -154,12 +163,11 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
   </div>
 
   <div class="card full" id="conclCard">
-    <h2>Висновки</h2>
+    <h2>Коментар за період</h2>
     <div class="sub" id="conclSub"></div>
     <div class="concl" id="conclBody"></div>
   </div>
 
-  <div class="foot">Apcholo Studio · дані з Supabase</div>
 </div>
 
 <script>
@@ -363,12 +371,35 @@ function drawCamps(){
     '</tr></thead><tbody>'+a.map(c=>'<tr><td>'+esc(c.name||'—')+'</td>'+
     cols.map(col=>'<td class="num">'+col[2](c[col[1]])+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
 }
+function renderText(t){
+  const bold=x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines=String(t).trim().split('\n').map(l=>l.trim());
+  let out='',buf=[];
+  const flush=()=>{ if(buf.length){ out+='<p>'+buf.map(bold).join(' ')+'</p>'; buf=[]; } };
+  let i=0;
+  while(i<lines.length){
+    const l=lines[i];
+    if(!l){ flush(); i++; continue; }
+    // рядок цілком у ** ** — це підзаголовок, а не абзац
+    const h=l.match(/^\*\*(.+?)\*\*:?$/);
+    if(h){ flush(); out+='<h3>'+esc(h[1])+'</h3>'; i++; continue; }
+    if(/^[-•*]\s+/.test(l)){
+      flush(); const it=[];
+      while(i<lines.length && /^[-•*]\s+/.test(lines[i])){ it.push(lines[i].replace(/^[-•*]\s+/,'')); i++; }
+      out+='<ul>'+it.map(x=>'<li>'+bold(x)+'</li>').join('')+'</ul>';
+      continue;
+    }
+    buf.push(l); i++;
+  }
+  flush(); return out;
+}
 function drawConcl(){
-  const r=DATA[idx];
-  document.getElementById('conclSub').textContent=labelOf(r);
+  const r=DATA[idx], card=document.getElementById('conclCard');
   const t=String(r.conclusions||'').trim();
-  document.getElementById('conclBody').innerHTML = t
-    ? esc(t) : '<span class="empty">Текст висновків за цей період не заповнено.</span>';
+  if(!t){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('conclSub').textContent=labelOf(r);
+  document.getElementById('conclBody').innerHTML=renderText(t);
 }
 
 /* ── ОРГАНІКА: є — малюємо, нема — блок зникає ───────────── */
