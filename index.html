@@ -6,190 +6,476 @@
 <title>Дашборд Facebook Ads — flowersbar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root{--pri:#5b6cff;--pri2:#8a4dff;--grn:#12b76a;--red:#f04438;--ink:#1a2233;--mut:#7a8399;--line:#eef1f7;--bg:#f4f6fb;}
+:root{
+  --acc:#5b6cff; --acc2:#8a4dff;
+  --bg:#f4f6fb; --surf:#ffffff; --surf2:#f7f9fd;
+  --ink:#1a2233; --ink2:#3a4258; --mut:#7a8399;
+  --line:#eef1f7; --line2:#dfe4ee;
+  --grn:#12873f; --red:#c0392e;
+  --sh:0 2px 12px rgba(30,40,90,.05);
+}
+html[data-theme="dark"]{
+  --bg:#0e1116; --surf:#171b22; --surf2:#1d222b;
+  --ink:#eef1f5; --ink2:#b6bdc9; --mut:#7b8593;
+  --line:#252b35; --line2:#333b47;
+  --grn:#3fb95f; --red:#e9736a;
+  --sh:0 2px 14px rgba(0,0,0,.45);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:22px}
-.wrap{max-width:1120px;margin:0 auto}
-.hero{background:linear-gradient(135deg,#5b6cff,#8a4dff);color:#fff;border-radius:20px;padding:26px 32px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;box-shadow:0 10px 30px rgba(91,108,255,.25)}
-.hero h1{font-size:22px;font-weight:700}
-.hero p{opacity:.9;margin-top:5px;font-size:14px}
-.badge{background:rgba(255,255,255,.2);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
-.kpi{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 2px 12px rgba(30,40,90,.05)}
+body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:20px}
+.wrap{max-width:1380px;margin:0 auto}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+.hero{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:20px;
+  padding:22px 28px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+.hero h1{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.hero p{opacity:.9;margin-top:4px;font-size:14px}
+.badge{background:rgba(255,255,255,.2);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}
+
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.seg{display:inline-flex;background:var(--surf);border:1px solid var(--line2);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--mut)}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff;font-weight:600}
+.ctl{background:var(--surf);border:1px solid var(--line2);border-radius:10px;padding:7px 12px;cursor:pointer;font-size:13px}
+.spacer{flex:1}
+.sw{display:inline-flex;gap:5px;background:var(--surf);border:1px solid var(--line2);border-radius:10px;padding:5px 7px}
+.sw button{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.sw button[aria-pressed="true"]{border-color:var(--ink)}
+
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--surf);border-radius:16px;padding:15px 17px;box-shadow:var(--sh)}
 .kpi .k{font-size:12px;color:var(--mut);margin-bottom:6px}
-.kpi .v{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.kpi .v{font-size:19px;font-weight:700;letter-spacing:-.03em}
 .kpi .d{font-size:12px;margin-top:5px;font-weight:600}
 .up{color:var(--grn)}.down{color:var(--red)}.flat{color:var(--mut)}
-.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
-.card{background:#fff;border-radius:18px;padding:20px 22px;box-shadow:0 2px 12px rgba(30,40,90,.05)}
+
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--surf);border-radius:18px;padding:19px 22px;box-shadow:var(--sh);min-width:0}
 .card.full{grid-column:1 / -1}
-.card h2{font-size:15px;margin-bottom:4px;color:#2a3350}
-.card .sub{font-size:12px;color:var(--mut);margin-bottom:14px}
-canvas{max-height:260px}
+.card h2{font-size:15px;margin-bottom:3px;letter-spacing:-.01em}
+.card .sub{font-size:12px;color:var(--mut);margin-bottom:13px}
+.card .hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+canvas{max-height:250px}
+
+.pick{display:flex;gap:4px;flex-wrap:wrap}
+.pick button{border:1px solid var(--line2);background:transparent;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--mut)}
+.pick button[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);font-weight:600}
+
+.tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:13.5px;text-align:left}
-th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 td.num,th.num{text-align:right;white-space:nowrap}
-.months tbody tr{cursor:pointer;transition:background .12s}
-.months tbody tr:hover{background:#f7f9fd}
-.months tbody tr.active{background:#eef0ff}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--surf2)}
+tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
-.detail .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
-.detail .mrow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f2f4fa;font-size:13.5px}
-.detail .mrow span:last-child{font-weight:700}
-.concl{font-size:13px;line-height:1.65;color:#3a4258;white-space:pre-wrap;margin-top:6px}
-.foot{text-align:center;color:#9aa3b8;font-size:12px;margin-top:10px}
-@media(max-width:860px){.grid{grid-template-columns:repeat(3,1fr)}.panels{grid-template-columns:1fr}.detail .mgrid{grid-template-columns:1fr}}
+
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+.mrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.mrow span:last-child{font-weight:700;white-space:nowrap}
+.concl{font-size:13.5px;line-height:1.68;color:var(--ink2);white-space:pre-wrap}
+
+.org{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.org:last-child{margin-bottom:0}
+.orgh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  background:var(--surf2);padding:10px 15px;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:600}
+.orgh span{font-size:11.5px;color:var(--mut);font-weight:400}
+.orgg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.orgt{padding:13px 15px;border-right:1px solid var(--line)}
+.orgt:last-child{border-right:0}
+.orgt .k{font-size:12px;color:var(--mut);margin-bottom:4px}
+.orgt .v{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.orgt .d{font-size:12px;margin-top:3px;font-weight:600}
+
+.empty{color:var(--mut);font-size:13.5px;padding:10px 0;line-height:1.6}
+.foot{text-align:center;color:var(--mut);font-size:12px;margin-top:14px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}.panels{grid-template-columns:1fr}.mgrid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <div class="hero">
-    <div><h1>Дашборд Facebook Ads — flowersbar</h1><p id="sub">Період: —</p></div>
-    <div class="badge" id="mode">демо-дані</div>
+    <div><h1 id="title">Дашборд Facebook Ads</h1><p id="sub">Завантаження…</p></div>
+    <div class="badge" id="mode">…</div>
+  </div>
+
+  <div class="bar">
+    <select class="ctl" id="clientSel" aria-label="Клієнт" style="display:none"></select>
+    <div class="seg" id="granSeg"></div>
+    <select class="ctl" id="periodSel" aria-label="Період"></select>
+    <div class="spacer"></div>
+    <div class="sw" id="swatches" title="Колір"></div>
+    <button class="ctl" id="themeBtn">Тема</button>
   </div>
 
   <div class="grid" id="cards"></div>
 
-  <div class="card full" style="margin-bottom:18px">
-    <h2>Запущені кампанії</h2>
-    <div class="sub" id="campSub">за вибраний місяць</div>
-    <div id="camps"></div>
+  <div class="card full" style="margin-bottom:16px">
+    <div class="hd">
+      <div><h2>Динаміка</h2><div class="sub" id="trendSub">по періодах</div></div>
+      <div class="pick" id="metricPick"></div>
+    </div>
+    <canvas id="cTrend"></canvas>
   </div>
 
   <div class="panels">
     <div class="card">
-      <h2>Якість трафіку — CTR по місяцях</h2>
-      <div class="sub">% кліків від показів</div>
-      <canvas id="cCtr"></canvas>
-    </div>
-    <div class="card">
-      <h2>Кліки та взаємодії по місяцях</h2>
-      <div class="sub">залучення аудиторії</div>
-      <canvas id="cEng"></canvas>
-    </div>
-  </div>
-
-  <div class="panels">
-    <div class="card">
-      <h2>Місяці</h2>
-      <div class="sub">клікни рядок — деталі та кампанії за місяць</div>
-      <table class="months">
+      <h2>Періоди</h2>
+      <div class="sub">клікни рядок — деталі за період</div>
+      <div class="tw"><table>
         <thead><tr><th>Період</th><th class="num">Витрати</th><th class="num">CTR</th><th class="num">Кліки</th></tr></thead>
         <tbody id="rows"></tbody>
-      </table>
+      </table></div>
     </div>
-    <div class="card detail">
-      <h2 id="dTitle">Деталі місяця</h2>
+    <div class="card">
+      <h2 id="dTitle">Показники</h2>
       <div class="sub" id="dSub"></div>
       <div id="dBody"></div>
     </div>
   </div>
 
-  <div class="foot">Apcholo Studio · дані оновлюються автоматично з Supabase</div>
+  <div class="card full" id="orgCard" style="margin-bottom:16px;display:none">
+    <div class="hd">
+      <div><h2>Органіка</h2><div class="sub" id="orgSub">сторінка і профіль — не реклама</div></div>
+      <div class="pick" id="orgPick"></div>
+    </div>
+    <div id="orgBody"></div>
+    <div id="orgChartWrap" style="display:none;margin-top:16px"><canvas id="cOrg"></canvas></div>
+  </div>
+
+  <div class="card full" id="campCard" style="margin-bottom:16px">
+    <h2>Кампанії</h2>
+    <div class="sub" id="campSub"></div>
+    <div class="tw" id="camps"></div>
+  </div>
+
+  <div class="card full" id="conclCard">
+    <h2>Висновки</h2>
+    <div class="sub" id="conclSub"></div>
+    <div class="concl" id="conclBody"></div>
+  </div>
+
+  <div class="foot">Apcholo Studio · дані з Supabase</div>
 </div>
 
 <script>
 const SUPABASE_URL = 'https://voexsxpjoqbbdjseluso.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable__U_0olImcWUb60tZW0bqlg_z8GfOZNz';
 
-const MONTHS=['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-const fmtInt=v=>Math.round(Number(v)||0).toLocaleString('uk-UA');
-const fmtZl =v=>Number(v||0).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2})+' zł';
-const pct=(a,b)=> b? Math.round((a-b)/b*1000)/10 : null;
-const short=r=>{const d=new Date(r.period_start);return MONTHS[d.getMonth()];};
-const parse=v=>{ if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return [];}} return v||[]; };
+/* ── утиліти ─────────────────────────────────────────────── */
+const MONTHS=['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
+const num=v=>Number(v)||0;
+const fmtInt=v=>Math.round(num(v)).toLocaleString('uk-UA');
+const fmtZl=v=>num(v).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2})+' zł';
+const fmtZlR=v=>fmtInt(v)+' zł';
+const fmtPct=v=>num(v).toFixed(2).replace('.',',')+'%';
+const delta=(a,b)=> b? Math.round((a-b)/b*1000)/10 : null;
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const parseJ=v=>{ if(v==null) return null; if(typeof v==='string'){ try{return JSON.parse(v);}catch(e){return null;} } return v; };
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}},
+          set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 
+/* період: місяць чи тиждень — рахуємо з дат */
+function granOf(r){
+  const a=Date.parse(r.period_start), b=Date.parse(r.period_end||r.period_start);
+  if(isNaN(a)||isNaN(b)) return 'month';
+  return ((b-a)/86400000+1) <= 10 ? 'week' : 'month';
+}
+function labelOf(r){
+  if(r.period_label && !/^\d{4}-\d{2}-\d{2}/.test(r.period_label)) return r.period_label;
+  const d=new Date(r.period_start);
+  if(isNaN(d)) return r.period_label||'—';
+  if(granOf(r)==='week'){
+    const e=new Date(r.period_end||r.period_start);
+    const p=n=>String(n).padStart(2,'0');
+    return p(d.getDate())+'.'+p(d.getMonth()+1)+'–'+p(e.getDate())+'.'+p(e.getMonth()+1);
+  }
+  return MONTHS[d.getMonth()]+' '+d.getFullYear();
+}
+
+/* ── демо на випадок порожньої бази ──────────────────────── */
 const SAMPLE=[
-  {period_label:'Демо',period_start:'2026-05-01',spend:512,reach:31240,impressions:41200,cpm:12.4,frequency:1.3,ctr:2.11,cpc:0.51,link_clicks:842,all_clicks:964,engagement:9870,shares:14,saves:22,leads:1,ads_count:44,audiences:[{name:'Трафік (інтереси)',ctr:2.4,spend:120,reach:9000}],conclusions:'Демо-дані. Підключи Supabase.'},
+  {period_start:'2026-06-01',period_end:'2026-06-30',spend:1362,reach:59203,impressions:99260,cpm:13.72,frequency:1.68,ctr:2.70,cpc:0.46,link_clicks:2676,all_clicks:2740,engagement:15400,shares:31,saves:18,ads_count:52,audiences:[],organic:null,conclusions:'Демо-дані. Реальні з’являться, коли бот сформує звіт.'},
+  {period_start:'2026-07-01',period_end:'2026-07-31',spend:1560,reach:88000,impressions:141000,cpm:11.1,frequency:1.6,ctr:3.05,cpc:0.36,link_clicks:4300,all_clicks:4420,engagement:22100,shares:44,saves:26,ads_count:63,audiences:[],organic:null,conclusions:'Демо-дані.'},
+  {period_start:'2026-08-01',period_end:'2026-08-28',spend:1730.31,reach:113077,impressions:172713,cpm:10.02,frequency:1.5,ctr:3.29,cpc:0.31,link_clicks:5512,all_clicks:5680,engagement:29746,shares:61,saves:34,ads_count:74,audiences:[],organic:null,conclusions:'Демо-дані.'}
 ];
 
-let DATA=[], charts={};
-const INVERT={cpc:true};
+/* ── стан ────────────────────────────────────────────────── */
+let ALL=[], DATA=[], live=false, charts={}, idx=0;
+let client = ls.get('fb_client','');
+let gran = ls.get('fb_gran','month');
+let metric = ls.get('fb_metric','spend');
+let orgMetric = null;
 
+const METRICS={
+  spend:{l:'Витрати', f:fmtZlR, good:null},
+  reach:{l:'Охоплення', f:fmtInt, good:true},
+  impressions:{l:'Покази', f:fmtInt, good:true},
+  ctr:{l:'CTR', f:v=>num(v).toFixed(2).replace('.',',')+'%', good:true},
+  link_clicks:{l:'Кліки', f:fmtInt, good:true},
+  cpc:{l:'Ціна кліка', f:v=>num(v).toFixed(2).replace('.',',')+' zł', good:false}
+};
+const ACCENTS=[['#5b6cff','#8a4dff'],['#0f7490','#0ea5b7'],['#0e9f6e','#38b48b'],['#d97706','#f0a13c'],['#334155','#5b6577']];
+
+/* ── завантаження ────────────────────────────────────────── */
 async function load(){
-  if(SUPABASE_URL && SUPABASE_ANON_KEY){
-    try{
-      const r=await fetch(`${SUPABASE_URL}/rest/v1/fb_reports?select=*&order=period_start.asc`,
-        {headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
-      const j=await r.json();
-      if(Array.isArray(j)&&j.length){DATA=j;document.getElementById('mode').textContent='живі дані';return;}
-    }catch(e){console.warn('Supabase',e);}
-  }
-  DATA=SAMPLE;
+  try{
+    const r=await fetch(SUPABASE_URL+'/rest/v1/fb_reports?select=*&order=period_start.asc',
+      {headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
+    const j=await r.json();
+    if(Array.isArray(j)&&j.length){ ALL=j; live=true; return; }
+  }catch(e){ console.warn('Supabase недоступна:',e); }
+  ALL=SAMPLE; live=false;
 }
 
-const baseOpts=extra=>Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#7a8399'}},y:{beginAtZero:true,grid:{color:'#eef1f7'},ticks:{color:'#7a8399'}}}},extra||{});
-function grad(ctx,c1,c2){const g=ctx.createLinearGradient(0,0,0,240);g.addColorStop(0,c1);g.addColorStop(1,c2);return g;}
+/* ── органіка: витягуємо у плаский вигляд ────────────────── */
+function orgBlocks(r){
+  const o=parseJ(r.organic);
+  if(!Array.isArray(o)||!o.length) return [];
+  return o.filter(b=>b&&Array.isArray(b.metrics)&&b.metrics.length);
+}
+function orgFlat(r){            // {"Перегляди": {value, delta_pct, unit}}
+  const out={};
+  for(const b of orgBlocks(r))
+    for(const m of b.metrics)
+      if(m&&m.label!=null&&m.value!=null) out[String(m.label).trim()]={v:num(m.value),d:m.delta_pct,u:m.unit||''};
+  return out;
+}
 
+/* ── рендер ──────────────────────────────────────────────── */
+function applyAccent(){
+  const i=+ls.get('fb_acc','0'), a=ACCENTS[i]||ACCENTS[0];
+  document.documentElement.style.setProperty('--acc',a[0]);
+  document.documentElement.style.setProperty('--acc2',a[1]);
+}
+function clientsOf(){ return [...new Set(ALL.map(r=>r.business||'').filter(Boolean))]; }
+function scoped(){ const c=clientsOf(); return (c.length>1&&client)?ALL.filter(r=>(r.business||'')===client):ALL; }
+function buildBar(){
+  const cs=clientsOf(), csel=document.getElementById('clientSel');
+  if(cs.length>1){
+    if(!client||cs.indexOf(client)<0) client=cs[0];
+    csel.style.display=''; csel.innerHTML=cs.map(c=>'<option'+(c===client?' selected':'')+'>'+esc(c)+'</option>').join('');
+  } else { client=cs[0]||''; csel.style.display='none'; }
+  const grans=[...new Set(scoped().map(granOf))];
+  const seg=document.getElementById('granSeg');
+  const opts=[['month','Місяці'],['week','Тижні']].filter(g=>grans.includes(g[0]));
+  seg.innerHTML=opts.map(g=>'<button data-g="'+g[0]+'" aria-pressed="'+(g[0]===gran)+'">'+g[1]+'</button>').join('')
+    || '<button aria-pressed="true">Періоди</button>';
+  document.getElementById('swatches').innerHTML=ACCENTS.map((a,i)=>
+    '<button data-a="'+i+'" aria-pressed="'+(i===+ls.get('fb_acc','0'))+'" style="background:linear-gradient(135deg,'+a[0]+','+a[1]+')" aria-label="Колір '+(i+1)+'"></button>').join('');
+  document.getElementById('metricPick').innerHTML=Object.keys(METRICS).map(k=>
+    '<button data-m="'+k+'" aria-pressed="'+(k===metric)+'">'+METRICS[k].l+'</button>').join('');
+}
+function selectData(){
+  const base=scoped();
+  const grans=[...new Set(base.map(granOf))];
+  if(!grans.includes(gran)) gran = grans[0]||'month';
+  DATA=base.filter(r=>granOf(r)===gran);
+  if(idx>DATA.length-1) idx=DATA.length-1;
+  if(idx<0) idx=0;
+  const sel=document.getElementById('periodSel');
+  sel.innerHTML=DATA.map((r,i)=>'<option value="'+i+'"'+(i===idx?' selected':'')+'>'+esc(labelOf(r))+'</option>').join('');
+}
 function drawCards(){
-  const last=DATA[DATA.length-1],prev=DATA[DATA.length-2];
-  document.getElementById('sub').textContent='Останній період: '+(last.period_label||'—');
-  const defs=[['Витрати',fmtZl(last.spend),'spend'],['Охоплення',fmtInt(last.reach),'reach'],['Покази',fmtInt(last.impressions),'impressions'],['CTR',(Number(last.ctr)||0).toFixed(2).replace('.',',')+'%','ctr'],['Кліки',fmtInt(last.link_clicks),'link_clicks'],['Ціна за клік',fmtZl(last.cpc),'cpc']];
-  document.getElementById('cards').innerHTML=defs.map(([k,v,key])=>{
-    let d='<div class="d flat">—</div>';
-    if(prev){const p=pct(Number(last[key])||0,Number(prev[key])||0);
-      if(p!==null){ const good = INVERT[key]? p<0 : p>=0; d=`<div class="d ${good?'up':'down'}">${p>=0?'▲':'▼'} ${Math.abs(p)}%</div>`; }}
-    return `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div>${d}</div>`;
+  const r=DATA[idx], prev=idx>0?DATA[idx-1]:null;
+  document.getElementById('title').textContent='Дашборд Facebook Ads — '+(r.business||'flowersbar');
+  document.getElementById('sub').textContent='Період: '+labelOf(r);
+  document.getElementById('mode').textContent=live?'живі дані':'демо-дані';
+  const defs=[['Витрати',fmtZlR(r.spend),'spend'],['Охоплення',fmtInt(r.reach),'reach'],
+    ['Покази',fmtInt(r.impressions),'impressions'],['CTR',fmtPct(r.ctr),'ctr'],
+    ['Кліки',fmtInt(r.link_clicks),'link_clicks'],['Ціна кліка',fmtZl(r.cpc),'cpc']];
+  document.getElementById('cards').innerHTML=defs.map(function(d){
+    let html='<div class="d flat">— перший період</div>';
+    if(prev){
+      const p=delta(num(r[d[2]]),num(prev[d[2]]));
+      if(p!==null){
+        const g=METRICS[d[2]].good;
+        const cls=(g===null||Math.abs(p)<0.5)?'flat':((g?p>=0:p<0)?'up':'down');
+        html='<div class="d '+cls+'">'+(Math.abs(p)<0.5?'▬':(p>=0?'▲':'▼'))+' '+Math.abs(p)+'%</div>';
+      }
+    }
+    return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div>'+html+'</div>';
   }).join('');
 }
-
-function drawCtr(){
-  const ctx=document.getElementById('cCtr');
-  if(charts.ctr)charts.ctr.destroy();
-  charts.ctr=new Chart(ctx,{type:'line',data:{labels:DATA.map(short),datasets:[{data:DATA.map(r=>Number(r.ctr)||0),borderColor:'#8a4dff',backgroundColor:grad(ctx.getContext('2d'),'rgba(138,77,255,.28)','rgba(138,77,255,0)'),fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#8a4dff'}]},options:baseOpts({scales:{x:{grid:{display:false},ticks:{color:'#7a8399'}},y:{beginAtZero:true,grid:{color:'#eef1f7'},ticks:{color:'#7a8399',callback:v=>v+'%'}}}})});
+function baseOpts(extra){
+  const g=css('--line'), t=css('--mut');
+  return Object.assign({responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{intersect:false,mode:'index'}},
+    scales:{x:{grid:{display:false},ticks:{color:t}},y:{beginAtZero:true,grid:{color:g},ticks:{color:t}}}},extra||{});
 }
-function drawEng(){
-  const ctx=document.getElementById('cEng');
-  if(charts.eng)charts.eng.destroy();
-  charts.eng=new Chart(ctx,{type:'bar',data:{labels:DATA.map(short),datasets:[
-    {label:'Кліки',data:DATA.map(r=>Number(r.link_clicks)||0),backgroundColor:'#5b6cff',borderRadius:6,barPercentage:.7,categoryPercentage:.6},
-    {label:'Взаємодії',data:DATA.map(r=>Number(r.engagement)||0),backgroundColor:'#c7cdff',borderRadius:6,barPercentage:.7,categoryPercentage:.6}
-  ]},options:baseOpts({plugins:{legend:{display:true,labels:{usePointStyle:true,boxWidth:8,color:'#2a3350'}}}})});
+function drawTrend(){
+  const ctx=document.getElementById('cTrend');
+  if(charts.trend) charts.trend.destroy();
+  const M=METRICS[metric];
+  document.getElementById('trendSub').textContent=M.l+' по '+(gran==='week'?'тижнях':'місяцях');
+  const acc=css('--acc');
+  const g=ctx.getContext('2d').createLinearGradient(0,0,0,230);
+  g.addColorStop(0,acc+'44'); g.addColorStop(1,acc+'05');
+  charts.trend=new Chart(ctx,{type:'line',data:{labels:DATA.map(labelOf),
+    datasets:[{data:DATA.map(r=>num(r[metric])),borderColor:acc,backgroundColor:g,fill:true,tension:.32,
+      pointRadius:4,pointBackgroundColor:acc,borderWidth:2}]},
+    options:baseOpts({scales:{x:{grid:{display:false},ticks:{color:css('--mut')}},
+      y:{beginAtZero:metric!=='ctr'&&metric!=='cpc',grid:{color:css('--line')},
+         ticks:{color:css('--mut'),callback:v=>M.f(v)}}}})});
 }
-
-function drawCampaigns(i){
-  const r=DATA[i];
-  document.getElementById('campSub').textContent=(r.period_label||short(r));
-  let a=parse(r.audiences);
-  a=a.slice().sort((x,y)=>(Number(y.spend)||0)-(Number(x.spend)||0));
-  const box=document.getElementById('camps');
-  if(!a.length){ box.innerHTML='<div style="color:#9aa3b8;font-size:13.5px;padding:8px 0">Нема даних по кампаніях за цей місяць</div>'; return; }
-  const show=k=>a.some(c=>Number(c[k])>0);
-  const cols=[];
-  if(show('spend')) cols.push(['Витрати','spend',fmtZl]);
-  cols.push(['Охоплення','reach',fmtInt]);
-  if(show('clicks')) cols.push(['Кліки','clicks',fmtInt]);
-  if(show('cpc')) cols.push(['CPC','cpc',fmtZl]);
-  cols.push(['CTR','ctr',x=>Number(x).toFixed(2).replace('.',',')+'%']);
-  const thead='<tr><th>Кампанія</th>'+cols.map(c=>`<th class="num">${c[0]}</th>`).join('')+'</tr>';
-  const rows=a.map(c=>'<tr><td>'+(c.name||'—')+'</td>'+cols.map(col=>`<td class="num">${col[2](Number(c[col[1]])||0)}</td>`).join('')+'</tr>').join('');
-  box.innerHTML='<table><thead>'+thead+'</thead><tbody>'+rows+'</tbody></table>';
-}
-
 function drawRows(){
-  document.getElementById('rows').innerHTML=DATA.map((r,i)=>{
-    const s=Number(r.spend)||0, col=s>1000?'#12b76a':s>100?'#f79009':'#d0d5dd';
-    return `<tr data-i="${i}"><td><span class="dot" style="background:${col}"></span>${r.period_label||short(r)}</td><td class="num">${fmtZl(r.spend)}</td><td class="num">${(Number(r.ctr)||0).toFixed(2).replace('.',',')}%</td><td class="num">${fmtInt(r.link_clicks)}</td></tr>`;
+  document.getElementById('rows').innerHTML=DATA.map(function(r,i){
+    const s=num(r.spend), col=s>1000?'#12873f':s>100?'#d97706':'#9aa3b8';
+    return '<tr class="click'+(i===idx?' active':'')+'" data-i="'+i+'">'+
+      '<td><span class="dot" style="background:'+col+'"></span>'+esc(labelOf(r))+'</td>'+
+      '<td class="num">'+fmtZlR(r.spend)+'</td><td class="num">'+fmtPct(r.ctr)+'</td>'+
+      '<td class="num">'+fmtInt(r.link_clicks)+'</td></tr>';
   }).join('');
-  document.querySelectorAll('#rows tr').forEach(tr=>tr.onclick=()=>selectMonth(+tr.dataset.i));
+  document.querySelectorAll('#rows tr').forEach(tr=>tr.onclick=()=>{ idx=+tr.dataset.i; render(false); });
+}
+function drawDetail(){
+  const r=DATA[idx];
+  document.getElementById('dTitle').textContent='Показники — '+labelOf(r);
+  document.getElementById('dSub').textContent=r.business||'';
+  let m=parseJ(r.metrics);
+  if(!Array.isArray(m)||!m.length) m=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],
+    ['Покази',fmtInt(r.impressions)],['CTR',fmtPct(r.ctr)],['Кліки',fmtInt(r.link_clicks)],
+    ['Ціна кліка',fmtZl(r.cpc)],['Частота',num(r.frequency).toFixed(1).replace('.',',')],
+    ['Креативів',String(r.ads_count||'—')]];
+  document.getElementById('dBody').innerHTML='<div class="mgrid">'+
+    m.map(p=>'<div class="mrow"><span>'+esc(p[0])+'</span><span>'+esc(p[1])+'</span></div>').join('')+'</div>';
+}
+function drawCamps(){
+  const r=DATA[idx];
+  document.getElementById('campSub').textContent=labelOf(r);
+  let a=parseJ(r.audiences); a=Array.isArray(a)?a.slice():[];
+  const box=document.getElementById('camps');
+  if(!a.length){ box.innerHTML='<div class="empty">За цей період кампаній не збереглося.</div>'; return; }
+  a.sort((x,y)=>num(y.ctr)-num(x.ctr));
+  const has=k=>a.some(c=>num(c[k])>0);
+  const cols=[];
+  if(has('spend')) cols.push(['Витрати','spend',fmtZlR]);
+  if(has('reach')) cols.push(['Охоплення','reach',fmtInt]);
+  if(has('clicks')) cols.push(['Кліки','clicks',fmtInt]);
+  if(has('cpc')) cols.push(['CPC','cpc',fmtZl]);
+  cols.push(['CTR','ctr',fmtPct]);
+  box.innerHTML='<table><thead><tr><th>Кампанія</th>'+cols.map(c=>'<th class="num">'+c[0]+'</th>').join('')+
+    '</tr></thead><tbody>'+a.map(c=>'<tr><td>'+esc(c.name||'—')+'</td>'+
+    cols.map(col=>'<td class="num">'+col[2](c[col[1]])+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+}
+function drawConcl(){
+  const r=DATA[idx];
+  document.getElementById('conclSub').textContent=labelOf(r);
+  const t=String(r.conclusions||'').trim();
+  document.getElementById('conclBody').innerHTML = t
+    ? esc(t) : '<span class="empty">Текст висновків за цей період не заповнено.</span>';
 }
 
-function selectMonth(i){
-  document.querySelectorAll('#rows tr').forEach(tr=>tr.classList.toggle('active',+tr.dataset.i===i));
-  const r=DATA[i];
-  document.getElementById('dTitle').textContent='Показники — '+(r.period_label||short(r));
-  document.getElementById('dSub').textContent=r.business||'';
-  let mtr=parse(r.metrics);
-  if(!mtr.length){mtr=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],['Покази',fmtInt(r.impressions)],['CTR',(Number(r.ctr)||0).toFixed(2).replace('.',',')+'%'],['Кліки',fmtInt(r.link_clicks)],['CPC',fmtZl(r.cpc)]];}
-  document.getElementById('dBody').innerHTML='<div class="mgrid">'+mtr.map(([k,v])=>`<div class="mrow"><span>${k}</span><span>${v}</span></div>`).join('')+'</div>';
-  drawCampaigns(i);
+/* ── ОРГАНІКА: є — малюємо, нема — блок зникає ───────────── */
+const KIND={instagram:'Instagram',facebook:'Facebook',creative:'Креатив',lead:'Заявки',site:'Сайт',other:'Матеріал'};
+function drawOrganic(){
+  const card=document.getElementById('orgCard');
+  const blocks=orgBlocks(DATA[idx]);
+  const withOrg=DATA.filter(r=>orgBlocks(r).length);
+
+  if(!blocks.length && !withOrg.length){ card.style.display='none'; return; }
+  card.style.display='';
+
+  // 1. картки за вибраний період
+  const body=document.getElementById('orgBody');
+  document.getElementById('orgSub').textContent='сторінка і профіль за '+labelOf(DATA[idx])+' — це не реклама';
+  if(!blocks.length){
+    body.innerHTML='<div class="empty">За цей період скрінів органіки не було. Дані з’являться, щойно таргетолог надішле скрін до звіту.</div>';
+  }else{
+    body.innerHTML=blocks.map(function(b){
+      const tiles=b.metrics.slice(0,6).map(function(m){
+        let d='';
+        if(m.delta_pct!=null&&m.delta_pct!==''){
+          const p=num(m.delta_pct);
+          d='<div class="d '+(p>=0?'up':'down')+'">'+(p>=0?'▲ ':'▼ ')+Math.abs(p)+'%</div>';
+        }
+        return '<div class="orgt"><div class="k">'+esc(m.label)+'</div><div class="v">'+
+          fmtInt(m.value)+(m.unit?' '+esc(m.unit):'')+'</div>'+d+'</div>';
+      }).join('');
+      return '<div class="org"><div class="orgh">'+esc(b.title||KIND[b.kind]||'Органіка')+
+        '<span>'+esc(b.period_hint||KIND[b.kind]||'')+'</span></div><div class="orgg">'+tiles+'</div></div>';
+    }).join('');
+  }
+
+  // 2. графік — тільки якщо метрика є мінімум у двох періодах
+  const counts={};
+  DATA.forEach(function(r){ Object.keys(orgFlat(r)).forEach(function(k){ counts[k]=(counts[k]||0)+1; }); });
+  const chartable=Object.keys(counts).filter(k=>counts[k]>=2);
+  const pick=document.getElementById('orgPick');
+  const wrap=document.getElementById('orgChartWrap');
+
+  if(!chartable.length){
+    pick.innerHTML=''; wrap.style.display='none';
+    if(charts.org){ charts.org.destroy(); charts.org=null; }
+    return;
+  }
+  if(!orgMetric || chartable.indexOf(orgMetric)<0) orgMetric=chartable[0];
+  pick.innerHTML=chartable.map(k=>'<button data-o="'+esc(k)+'" aria-pressed="'+(k===orgMetric)+'">'+esc(k)+'</button>').join('');
+  wrap.style.display='';
+
+  const vals=DATA.map(function(r){ const f=orgFlat(r); return f[orgMetric]?f[orgMetric].v:null; }); // null = розрив, не нуль
+  const ctx=document.getElementById('cOrg');
+  if(charts.org) charts.org.destroy();
+  const acc=css('--acc2');
+  charts.org=new Chart(ctx,{type:'line',data:{labels:DATA.map(labelOf),
+    datasets:[{data:vals,borderColor:acc,backgroundColor:'transparent',borderWidth:2,
+      tension:.32,pointRadius:5,pointBackgroundColor:acc,spanGaps:false}]},
+    options:baseOpts()});
 }
+
+/* ── збірка ──────────────────────────────────────────────── */
+function render(rebuild){
+  if(rebuild) buildBar();
+  selectData();
+  if(!DATA.length){
+    document.getElementById('cards').innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="empty">У базі поки немає жодного періоду. Замов звіт у боті — і дані з’являться тут.</div></div>';
+    return;
+  }
+  drawCards(); drawTrend(); drawRows(); drawDetail(); drawCamps(); drawConcl(); drawOrganic();
+}
+
+document.getElementById('granSeg').addEventListener('click',function(e){
+  const b=e.target.closest('button[data-g]'); if(!b) return;
+  gran=b.dataset.g; ls.set('fb_gran',gran); idx=99; render(true);
+});
+document.getElementById('clientSel').addEventListener('change',function(){
+  client=this.value; ls.set('fb_client',client); idx=99; render(true);
+});
+document.getElementById('periodSel').addEventListener('change',function(){ idx=+this.value; render(false); });
+document.getElementById('metricPick').addEventListener('click',function(e){
+  const b=e.target.closest('button[data-m]'); if(!b) return;
+  metric=b.dataset.m; ls.set('fb_metric',metric);
+  [].forEach.call(this.children,x=>x.setAttribute('aria-pressed',x===b));
+  drawTrend();
+});
+document.getElementById('orgPick').addEventListener('click',function(e){
+  const b=e.target.closest('button[data-o]'); if(!b) return;
+  orgMetric=b.dataset.o; drawOrganic();
+});
+document.getElementById('swatches').addEventListener('click',function(e){
+  const b=e.target.closest('button[data-a]'); if(!b) return;
+  ls.set('fb_acc',b.dataset.a); applyAccent();
+  [].forEach.call(this.children,x=>x.setAttribute('aria-pressed',x===b));
+  drawTrend(); drawOrganic();
+});
+document.getElementById('themeBtn').addEventListener('click',function(){
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'light':'dark');
+  ls.set('fb_theme',dark?'light':'dark');
+  drawTrend(); drawOrganic();
+});
 
 (async function(){
+  document.documentElement.setAttribute('data-theme', ls.get('fb_theme','light'));
+  applyAccent();
   await load();
-  drawCards();drawCtr();drawEng();drawRows();
-  selectMonth(DATA.length-1);
+  idx=99;
+  render(true);
 })();
 </script>
 </body>
