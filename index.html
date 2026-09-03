@@ -242,15 +242,9 @@ function fullLabel(r){
   return labelOf(r);
 }
 
-/* ── демо на випадок порожньої бази ──────────────────────── */
-const SAMPLE=[
-  {period_start:'2026-06-01',period_end:'2026-06-30',spend:1362,reach:59203,impressions:99260,cpm:13.72,frequency:1.68,ctr:2.70,cpc:0.46,link_clicks:2676,all_clicks:2740,engagement:15400,shares:31,saves:18,ads_count:52,audiences:[],organic:null,conclusions:'Демо-дані. Реальні з’являться, коли бот сформує звіт.'},
-  {period_start:'2026-07-01',period_end:'2026-07-31',spend:1560,reach:88000,impressions:141000,cpm:11.1,frequency:1.6,ctr:3.05,cpc:0.36,link_clicks:4300,all_clicks:4420,engagement:22100,shares:44,saves:26,ads_count:63,audiences:[],organic:null,conclusions:'Демо-дані.'},
-  {period_start:'2026-08-01',period_end:'2026-08-28',spend:1730.31,reach:113077,impressions:172713,cpm:10.02,frequency:1.5,ctr:3.29,cpc:0.31,link_clicks:5512,all_clicks:5680,engagement:29746,shares:61,saves:34,ads_count:74,audiences:[],organic:null,conclusions:'Демо-дані.'}
-];
 
 /* ── стан ────────────────────────────────────────────────── */
-let ALL=[], DATA=[], live=false, charts={}, idx=0;
+let ALL=[], DATA=[], live=false, loadError=false, charts={}, idx=0;
 let client = ls.get('fb_client','');
 let gran = ls.get('fb_gran','month');
 let metric = ls.get('fb_metric','spend');
@@ -272,9 +266,9 @@ async function load(){
     const r=await fetch(SUPABASE_URL+'/rest/v1/fb_reports?select=*&order=period_start.asc',
       {headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
     const j=await r.json();
-    if(Array.isArray(j)&&j.length){ ALL=normalize(j); live=true; if(ALL.length) return; }
-  }catch(e){ console.warn('Supabase недоступна:',e); }
-  ALL=normalize(SAMPLE); live=false;
+    if(Array.isArray(j)){ ALL=normalize(j); live=ALL.length>0; if(ALL.length) return; }
+  }catch(e){ console.warn('Supabase недоступна:',e); loadError=true; }
+  ALL=[]; live=false;
 }
 
 /* ── органіка: витягуємо у плаский вигляд ────────────────── */
@@ -504,13 +498,43 @@ function drawOrganic(){
 }
 
 /* ── збірка ──────────────────────────────────────────────── */
+function showEmpty(){
+  document.getElementById('title').textContent='Дашборд Facebook Ads';
+  document.getElementById('sub').textContent = loadError
+    ? 'Не вдалося зʼєднатися з базою' : 'У базі поки немає жодного звіту';
+  document.getElementById('mode').textContent = loadError ? 'немає звʼязку' : 'порожньо';
+  document.querySelector('.bar').style.display='none';
+  ['cards','campCard','conclCard','orgCard'].forEach(function(id){
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  document.querySelectorAll('.card.full, .panels').forEach(function(el){ el.style.display='none'; });
+  let box=document.getElementById('emptyCard');
+  if(!box){
+    box=document.createElement('div');
+    box.className='card full'; box.id='emptyCard';
+    document.querySelector('.wrap').appendChild(box);
+  }
+  box.style.display='';
+  box.innerHTML = loadError
+    ? '<h2>Немає звʼязку з базою</h2><div class="empty">Дашборд не зміг прочитати Supabase. Перевір, що проєкт активний і що політика доступу дозволяє читання.</div>'
+    : '<h2>Тут поки порожньо</h2><div class="empty">Жодного звіту в базі немає.<br><br>' +
+      'Напиши боту період — наприклад <b>09.07.2026 - 08.08.2026</b> — і через хвилину дані зʼявляться тут.<br>' +
+      'Сторінку тоді просто онови.</div>';
+}
 function render(rebuild){
+  if(!ALL.length){ showEmpty(); return; }
+  const eb=document.getElementById('emptyCard'); if(eb) eb.style.display='none';
+  document.querySelector('.bar').style.display='';
+  ['cards','campCard','conclCard'].forEach(function(id){
+    const el=document.getElementById(id); if(el) el.style.display='';
+  });
+  document.querySelectorAll('.panels').forEach(function(el){ el.style.display='grid'; });
+  document.querySelectorAll('.card.full').forEach(function(el){
+    if(el.id!=='emptyCard' && el.id!=='orgCard') el.style.display='';
+  });
   if(rebuild) buildBar();
   selectData();
-  if(!DATA.length){
-    document.getElementById('cards').innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="empty">У базі поки немає жодного періоду. Замов звіт у боті — і дані з’являться тут.</div></div>';
-    return;
-  }
+  if(!DATA.length){ showEmpty(); return; }
   drawCards(); drawTrend(); drawRows(); drawDetail(); drawCamps(); drawConcl(); drawOrganic();
 }
 
