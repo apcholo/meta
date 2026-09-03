@@ -127,6 +127,7 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 
   <div class="grid" id="cards"></div>
   <div class="warn" id="kpiWarn" style="display:none"></div>
+  <div class="warn" id="weekNote" style="display:none;border-left-color:var(--acc)"></div>
 
   <div class="card full" style="margin-bottom:16px">
     <div class="hd">
@@ -228,6 +229,15 @@ function normalize(rows){
     .sort((a,b)=>String(a.period_start).localeCompare(String(b.period_start)));
 }
 // короткий підпис — для осі графіка, списку і таблиці
+function weeksOf(r){
+  const w = parseJ(r && r.weeks);
+  if(!Array.isArray(w) || !w.length) return [];
+  return w.map(function(x){
+    return { period_start:x.start, period_end:x.end, business:(r&&r.business)||'',
+      spend:num(x.spend), reach:num(x.reach), impressions:num(x.impressions),
+      ctr:num(x.ctr), cpc:num(x.cpc), link_clicks:num(x.link_clicks), _week:true };
+  }).filter(x=>x.period_start);
+}
 function labelOf(r){
   const d=new Date(r.period_start+'T00:00:00Z');
   const e=new Date((r.period_end||r.period_start)+'T00:00:00Z');
@@ -244,7 +254,7 @@ function fullLabel(r){
 
 
 /* ── стан ────────────────────────────────────────────────── */
-let ALL=[], DATA=[], live=false, loadError=false, charts={}, idx=0;
+let ALL=[], DATA=[], live=false, loadError=false, charts={}, idx=0, widx=0;
 let client = ls.get('fb_client','');
 let gran = ls.get('fb_gran','month');
 let metric = ls.get('fb_metric','spend');
@@ -299,7 +309,9 @@ function buildBar(){
     if(!client||cs.indexOf(client)<0) client=cs[0];
     csel.style.display=''; csel.innerHTML=cs.map(c=>'<option'+(c===client?' selected':'')+'>'+esc(c)+'</option>').join('');
   } else { client=cs[0]||''; csel.style.display='none'; }
-  const grans=[...new Set(scoped().map(granOf))];
+  const base=scoped();
+  const hasWeeks = base.length && weeksOf(base[Math.min(idx, base.length-1)]).length > 0;
+  const grans = hasWeeks ? ['month','week'] : ['month'];
   const seg=document.getElementById('granSeg');
   const opts=[['month','Місяці'],['week','Тижні']].filter(g=>grans.includes(g[0]));
   seg.innerHTML=opts.map(g=>'<button data-g="'+g[0]+'" aria-pressed="'+(g[0]===gran)+'">'+g[1]+'</button>').join('')
@@ -311,18 +323,22 @@ function buildBar(){
 }
 function selectData(){
   const base=scoped();
-  const grans=[...new Set(base.map(granOf))];
-  if(!grans.includes(gran)) gran = grans[0]||'month';
-  DATA=base.filter(r=>granOf(r)===gran);
-  if(idx>DATA.length-1) idx=DATA.length-1;
+  if(idx>base.length-1) idx=base.length-1;
   if(idx<0) idx=0;
+  const wk = base.length ? weeksOf(base[idx]) : [];
+  if(gran==='week' && !wk.length) gran='month';
+  DATA = (gran==='week') ? wk : base;
+  if(gran==='week'){ if(widx>DATA.length-1) widx=DATA.length-1; if(widx<0) widx=0; }
+  // у списку завжди місяці — тижні беруться всередині вибраного
   const sel=document.getElementById('periodSel');
-  sel.innerHTML=DATA.map((r,i)=>'<option value="'+i+'"'+(i===idx?' selected':'')+'>'+esc(labelOf(r))+'</option>').join('');
+  sel.innerHTML=base.map((r,i)=>'<option value="'+i+'"'+(i===idx?' selected':'')+'>'+esc(labelOf(r))+'</option>').join('');
 }
+function curI(){ return gran==='week' ? widx : idx; }
+function curRow(){ return DATA[curI()]; }
 function drawCards(){
-  const r=DATA[idx], prev=idx>0?DATA[idx-1]:null;
+  const r=curRow(), prev=curI()>0?DATA[curI()-1]:null;
   document.getElementById('title').textContent='Дашборд Facebook Ads — '+(r.business||'flowersbar');
-  document.getElementById('sub').textContent='Період: '+fullLabel(r)+
+  document.getElementById('sub').textContent=(gran==='week'?'Тиждень: ':'Період: ')+fullLabel(r)+
     (partial(r) ? '  ·  неповний період, лише '+lenDays(r)+' дн.' : '');
   document.getElementById('mode').textContent=live?'живі дані':'демо-дані';
   const defs=[['Витрати',fmtZlR(r.spend),'spend'],['Охоплення',fmtInt(r.reach),'reach'],
@@ -358,7 +374,7 @@ function drawTrend(){
   const ctx=document.getElementById('cTrend');
   if(charts.trend) charts.trend.destroy();
   const M=METRICS[metric];
-  document.getElementById('trendSub').textContent=M.l+' по '+(gran==='week'?'тижнях':'місяцях');
+  document.getElementById('trendSub').textContent=M.l+(gran==='week'?' по тижнях усередині періоду':' по періодах');
   const acc=css('--acc');
   const g=ctx.getContext('2d').createLinearGradient(0,0,0,230);
   g.addColorStop(0,acc+'44'); g.addColorStop(1,acc+'05');
@@ -372,27 +388,34 @@ function drawTrend(){
 function drawRows(){
   document.getElementById('rows').innerHTML=DATA.map(function(r,i){
     const s=num(r.spend), col=s>1000?'#12873f':s>100?'#d97706':'#9aa3b8';
-    return '<tr class="click'+(i===idx?' active':'')+'" data-i="'+i+'">'+
+    return '<tr class="click'+(i===curI()?' active':'')+'" data-i="'+i+'">'+
       '<td><span class="dot" style="background:'+col+'"></span>'+esc(labelOf(r))+(partial(r)?'<span class="pt">неповний</span>':'')+'</td>'+
       '<td class="num">'+fmtZlR(r.spend)+'</td><td class="num">'+fmtPct(r.ctr)+'</td>'+
       '<td class="num">'+fmtInt(r.link_clicks)+'</td></tr>';
   }).join('');
-  document.querySelectorAll('#rows tr').forEach(tr=>tr.onclick=()=>{ idx=+tr.dataset.i; render(false); });
+  document.querySelectorAll('#rows tr').forEach(tr=>tr.onclick=()=>{ if(gran==='week'){widx=+tr.dataset.i;} else {idx=+tr.dataset.i;} render(false); });
 }
 function drawDetail(){
-  const r=DATA[idx];
-  document.getElementById('dTitle').textContent='Показники — '+fullLabel(r);
+  const r=curRow();
+  document.getElementById('dTitle').textContent=(r._week?'Тиждень — ':'Показники — ')+fullLabel(r);
   document.getElementById('dSub').textContent=r.business||'';
-  let m=parseJ(r.metrics);
-  if(!Array.isArray(m)||!m.length) m=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],
-    ['Покази',fmtInt(r.impressions)],['CTR',fmtPct(r.ctr)],['Кліки',fmtInt(r.link_clicks)],
-    ['Ціна кліка',fmtZl(r.cpc)],['Частота',num(r.frequency).toFixed(1).replace('.',',')],
-    ['Креативів',String(r.ads_count||'—')]];
+  let m;
+  if(r._week){
+    m=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],
+       ['Покази',fmtInt(r.impressions)],['CTR',fmtPct(r.ctr)],
+       ['Кліки',fmtInt(r.link_clicks)],['Ціна кліка',fmtZl(r.cpc)]];
+  } else {
+    m=parseJ(r.metrics);
+    if(!Array.isArray(m)||!m.length) m=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],
+      ['Покази',fmtInt(r.impressions)],['CTR',fmtPct(r.ctr)],['Кліки',fmtInt(r.link_clicks)],
+      ['Ціна кліка',fmtZl(r.cpc)],['Частота',num(r.frequency).toFixed(1).replace('.',',')],
+      ['Креативів',String(r.ads_count||'—')]];
+  }
   document.getElementById('dBody').innerHTML='<div class="mgrid">'+
     m.map(p=>'<div class="mrow"><span>'+esc(p[0])+'</span><span>'+esc(p[1])+'</span></div>').join('')+'</div>';
 }
 function drawCamps(){
-  const r=DATA[idx];
+  const r=DATA[idx] || {};
   document.getElementById('campSub').textContent=fullLabel(r);
   let a=parseJ(r.audiences); a=Array.isArray(a)?a.slice():[];
   const box=document.getElementById('camps');
@@ -432,7 +455,7 @@ function renderText(t){
   flush(); return out;
 }
 function drawConcl(){
-  const r=DATA[idx], card=document.getElementById('conclCard');
+  const r=DATA[idx] || {}, card=document.getElementById('conclCard');
   const t=String(r.conclusions||'').trim();
   if(!t){ card.style.display='none'; return; }
   card.style.display='';
@@ -535,17 +558,27 @@ function render(rebuild){
   if(rebuild) buildBar();
   selectData();
   if(!DATA.length){ showEmpty(); return; }
-  drawCards(); drawTrend(); drawRows(); drawDetail(); drawCamps(); drawConcl(); drawOrganic();
+  drawCards(); drawTrend(); drawRows(); drawDetail();
+  if(gran==='week'){
+    ['campCard','conclCard','orgCard'].forEach(function(id){
+      const el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    const note=document.getElementById('weekNote');
+    if(note){ note.style.display=''; note.textContent='Тижні всередині періоду «'+fullLabel(scoped()[idx])+'». Кампанії, органіка і коментар — на рівні всього періоду, перемкни на «Місяці».'; }
+  } else {
+    const note=document.getElementById('weekNote'); if(note) note.style.display='none';
+    drawCamps(); drawConcl(); drawOrganic();
+  }
 }
 
 document.getElementById('granSeg').addEventListener('click',function(e){
   const b=e.target.closest('button[data-g]'); if(!b) return;
-  gran=b.dataset.g; ls.set('fb_gran',gran); idx=99; render(true);
+  gran=b.dataset.g; ls.set('fb_gran',gran); widx=99; render(true);
 });
 document.getElementById('clientSel').addEventListener('change',function(){
   client=this.value; ls.set('fb_client',client); idx=99; render(true);
 });
-document.getElementById('periodSel').addEventListener('change',function(){ idx=+this.value; render(false); });
+document.getElementById('periodSel').addEventListener('change',function(){ idx=+this.value; widx=99; render(false); });
 document.getElementById('metricPick').addEventListener('click',function(e){
   const b=e.target.closest('button[data-m]'); if(!b) return;
   metric=b.dataset.m; ls.set('fb_metric',metric);
