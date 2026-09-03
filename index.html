@@ -71,6 +71,8 @@ tbody tr.click{cursor:pointer}
 tbody tr.click:hover{background:var(--surf2)}
 tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.pt{font-size:10.5px;color:#d97706;border:1px solid currentColor;border-radius:999px;
+  padding:1px 7px;margin-left:8px;vertical-align:middle;white-space:nowrap}
 
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
 .mrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
@@ -100,6 +102,8 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .orgt .d{font-size:12px;margin-top:3px;font-weight:600}
 
 .empty{color:var(--mut);font-size:13.5px;padding:10px 0;line-height:1.6}
+.warn{font-size:12.5px;color:var(--mut);background:var(--surf);border:1px solid var(--line2);
+  border-left:3px solid #d97706;border-radius:0 10px 10px 0;padding:9px 14px;margin:-6px 0 16px}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}.panels{grid-template-columns:1fr}.mgrid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -122,6 +126,7 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
   </div>
 
   <div class="grid" id="cards"></div>
+  <div class="warn" id="kpiWarn" style="display:none"></div>
 
   <div class="card full" style="margin-bottom:16px">
     <div class="hd">
@@ -194,16 +199,47 @@ function granOf(r){
   if(isNaN(a)||isNaN(b)) return 'month';
   return ((b-a)/86400000+1) <= 10 ? 'week' : 'month';
 }
+function isFullMonth(r){
+  const a=new Date(r.period_start+'T00:00:00Z');
+  const b=new Date((r.period_end||r.period_start)+'T00:00:00Z');
+  if(isNaN(a)||isNaN(b)) return true;
+  const last=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+1,0)).getUTCDate();
+  return a.getUTCDate()===1 && b.getUTCDate()===last &&
+         a.getUTCMonth()===b.getUTCMonth() && a.getUTCFullYear()===b.getUTCFullYear();
+}
+function lenDays(r){
+  const a=Date.parse(r.period_start), b=Date.parse(r.period_end||r.period_start);
+  if(isNaN(a)||isNaN(b)) return 30;
+  return Math.round((b-a)/86400000)+1;
+}
+function partial(r){ return granOf(r)==='month' && lenDays(r) < 25; }
+
+// один рядок на період — свіжий перемагає; порожні періоди геть
+function normalize(rows){
+  const keep={};
+  rows.forEach(function(r){
+    const k=(r.business||'')+'|'+r.period_start+'|'+(r.period_end||'');
+    const old=keep[k];
+    const newer = !old || (Number(r.id)||0) >= (Number(old.id)||0);
+    if(newer) keep[k]=r;
+  });
+  return Object.keys(keep).map(k=>keep[k])
+    .filter(r => num(r.spend)>0 || num(r.reach)>0)
+    .sort((a,b)=>String(a.period_start).localeCompare(String(b.period_start)));
+}
+// короткий підпис — для осі графіка, списку і таблиці
 function labelOf(r){
-  if(r.period_label && !/^\d{4}-\d{2}-\d{2}/.test(r.period_label)) return r.period_label;
-  const d=new Date(r.period_start);
+  const d=new Date(r.period_start+'T00:00:00Z');
+  const e=new Date((r.period_end||r.period_start)+'T00:00:00Z');
   if(isNaN(d)) return r.period_label||'—';
-  if(granOf(r)==='week'){
-    const e=new Date(r.period_end||r.period_start);
-    const p=n=>String(n).padStart(2,'0');
-    return p(d.getDate())+'.'+p(d.getMonth()+1)+'–'+p(e.getDate())+'.'+p(e.getMonth()+1);
-  }
-  return MONTHS[d.getMonth()]+' '+d.getFullYear();
+  const p=n=>String(n).padStart(2,'0');
+  if(isFullMonth(r)) return MONTHS[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2);
+  return p(d.getUTCDate())+'.'+p(d.getUTCMonth()+1)+'–'+p(e.getUTCDate())+'.'+p(e.getUTCMonth()+1);
+}
+// повний підпис — для шапки; те, що записав воркфлоу
+function fullLabel(r){
+  if(r.period_label && !/^\d{4}-\d{2}-\d{2}/.test(String(r.period_label))) return r.period_label;
+  return labelOf(r);
 }
 
 /* ── демо на випадок порожньої бази ──────────────────────── */
@@ -236,9 +272,9 @@ async function load(){
     const r=await fetch(SUPABASE_URL+'/rest/v1/fb_reports?select=*&order=period_start.asc',
       {headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
     const j=await r.json();
-    if(Array.isArray(j)&&j.length){ ALL=j; live=true; return; }
+    if(Array.isArray(j)&&j.length){ ALL=normalize(j); live=true; if(ALL.length) return; }
   }catch(e){ console.warn('Supabase недоступна:',e); }
-  ALL=SAMPLE; live=false;
+  ALL=normalize(SAMPLE); live=false;
 }
 
 /* ── органіка: витягуємо у плаский вигляд ────────────────── */
@@ -292,7 +328,8 @@ function selectData(){
 function drawCards(){
   const r=DATA[idx], prev=idx>0?DATA[idx-1]:null;
   document.getElementById('title').textContent='Дашборд Facebook Ads — '+(r.business||'flowersbar');
-  document.getElementById('sub').textContent='Період: '+labelOf(r);
+  document.getElementById('sub').textContent='Період: '+fullLabel(r)+
+    (partial(r) ? '  ·  неповний період, лише '+lenDays(r)+' дн.' : '');
   document.getElementById('mode').textContent=live?'живі дані':'демо-дані';
   const defs=[['Витрати',fmtZlR(r.spend),'spend'],['Охоплення',fmtInt(r.reach),'reach'],
     ['Покази',fmtInt(r.impressions),'impressions'],['CTR',fmtPct(r.ctr),'ctr'],
@@ -309,6 +346,13 @@ function drawCards(){
     }
     return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div>'+html+'</div>';
   }).join('');
+  const warn=document.getElementById('kpiWarn');
+  if(warn){
+    const bad = prev && (partial(prev) || partial(r));
+    warn.style.display = bad ? '' : 'none';
+    warn.textContent = bad
+      ? 'Один із періодів неповний — зміни у відсотках орієнтовні, а не точні.' : '';
+  }
 }
 function baseOpts(extra){
   const g=css('--line'), t=css('--mut');
@@ -335,7 +379,7 @@ function drawRows(){
   document.getElementById('rows').innerHTML=DATA.map(function(r,i){
     const s=num(r.spend), col=s>1000?'#12873f':s>100?'#d97706':'#9aa3b8';
     return '<tr class="click'+(i===idx?' active':'')+'" data-i="'+i+'">'+
-      '<td><span class="dot" style="background:'+col+'"></span>'+esc(labelOf(r))+'</td>'+
+      '<td><span class="dot" style="background:'+col+'"></span>'+esc(labelOf(r))+(partial(r)?'<span class="pt">неповний</span>':'')+'</td>'+
       '<td class="num">'+fmtZlR(r.spend)+'</td><td class="num">'+fmtPct(r.ctr)+'</td>'+
       '<td class="num">'+fmtInt(r.link_clicks)+'</td></tr>';
   }).join('');
@@ -343,7 +387,7 @@ function drawRows(){
 }
 function drawDetail(){
   const r=DATA[idx];
-  document.getElementById('dTitle').textContent='Показники — '+labelOf(r);
+  document.getElementById('dTitle').textContent='Показники — '+fullLabel(r);
   document.getElementById('dSub').textContent=r.business||'';
   let m=parseJ(r.metrics);
   if(!Array.isArray(m)||!m.length) m=[['Витрачено',fmtZl(r.spend)],['Охоплення',fmtInt(r.reach)],
@@ -355,7 +399,7 @@ function drawDetail(){
 }
 function drawCamps(){
   const r=DATA[idx];
-  document.getElementById('campSub').textContent=labelOf(r);
+  document.getElementById('campSub').textContent=fullLabel(r);
   let a=parseJ(r.audiences); a=Array.isArray(a)?a.slice():[];
   const box=document.getElementById('camps');
   if(!a.length){ box.innerHTML='<div class="empty">За цей період кампаній не збереглося.</div>'; return; }
@@ -398,7 +442,7 @@ function drawConcl(){
   const t=String(r.conclusions||'').trim();
   if(!t){ card.style.display='none'; return; }
   card.style.display='';
-  document.getElementById('conclSub').textContent=labelOf(r);
+  document.getElementById('conclSub').textContent=fullLabel(r);
   document.getElementById('conclBody').innerHTML=renderText(t);
 }
 
@@ -414,7 +458,7 @@ function drawOrganic(){
 
   // 1. картки за вибраний період
   const body=document.getElementById('orgBody');
-  document.getElementById('orgSub').textContent='сторінка і профіль за '+labelOf(DATA[idx])+' — це не реклама';
+  document.getElementById('orgSub').textContent='сторінка і профіль за '+fullLabel(DATA[idx])+' — це не реклама';
   if(!blocks.length){
     body.innerHTML='<div class="empty">За цей період скрінів органіки не було. Дані з’являться, щойно таргетолог надішле скрін до звіту.</div>';
   }else{
