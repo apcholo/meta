@@ -140,15 +140,6 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
   </div>
 
   <div class="grid" id="cards"></div>
-  <div class="warn" id="kpiWarn" style="display:none"></div>
-
-  <div class="card full" style="margin-bottom:16px">
-    <div class="hd">
-      <div><h2>Динаміка</h2><div class="sub" id="trendSub">по періодах</div></div>
-      <div class="pick" id="metricPick"></div>
-    </div>
-    <canvas id="cTrend"></canvas>
-  </div>
 
   <div class="panels">
     <div class="card">
@@ -325,11 +316,6 @@ function buildBar(){
     csel.style.display=''; csel.innerHTML=cs.map(c=>'<option'+(c===client?' selected':'')+'>'+esc(c)+'</option>').join('');
   } else { client=cs[0]||''; csel.style.display='none'; }
   const base=scoped();
-  const mk=Object.keys(METRICS).filter(function(k){
-    return base.some(function(x){ return x && x[k]!=null && x[k]!==''; }); });
-  if(mk.indexOf(metric)<0) metric = mk[0] || 'spend';
-  document.getElementById('metricPick').innerHTML=mk.map(k=>
-    '<button data-m="'+k+'" aria-pressed="'+(k===metric)+'">'+METRICS[k].l+'</button>').join('');
 }
 function selectData(){
   const base=scoped();
@@ -364,45 +350,14 @@ function drawCards(){
     return [KPI_LABEL[k], METRICS[k].f(r[k]), k];
   });
   document.getElementById('cards').innerHTML=defs.map(function(d){
-    let html='<div class="d flat">— перший період</div>';
-    if(prev){
-      const p=delta(num(r[d[2]]),num(prev[d[2]]));
-      if(p!==null){
-        const g=METRICS[d[2]].good;
-        const cls=(g===null||Math.abs(p)<0.5)?'flat':((g?p>=0:p<0)?'up':'down');
-        html='<div class="d '+cls+'">'+(Math.abs(p)<0.5?'▬':(p>=0?'▲':'▼'))+' '+Math.abs(p)+'%</div>';
-      }
-    }
-    return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div>'+html+'</div>';
+    return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div></div>';
   }).join('');
-  const warn=document.getElementById('kpiWarn');
-  if(warn){
-    const bad = prev && (partial(prev) || partial(r));
-    warn.style.display = bad ? '' : 'none';
-    warn.textContent = bad
-      ? 'Один із періодів неповний — зміни у відсотках орієнтовні, а не точні.' : '';
-  }
 }
 function baseOpts(extra){
   const g=css('--line'), t=css('--mut');
   return Object.assign({responsive:true,maintainAspectRatio:false,
     plugins:{legend:{display:false},tooltip:{intersect:false,mode:'index'}},
     scales:{x:{grid:{display:false},ticks:{color:t}},y:{beginAtZero:true,grid:{color:g},ticks:{color:t}}}},extra||{});
-}
-function drawTrend(){
-  const ctx=document.getElementById('cTrend');
-  if(charts.trend) charts.trend.destroy();
-  const M=METRICS[metric];
-  document.getElementById('trendSub').textContent=M.l+(gran==='week'?' по тижнях усередині періоду':' по періодах');
-  const acc=css('--acc');
-  const g=ctx.getContext('2d').createLinearGradient(0,0,0,230);
-  g.addColorStop(0,acc+'44'); g.addColorStop(1,acc+'05');
-  charts.trend=new Chart(ctx,{type:'line',data:{labels:DATA.map(labelOf),
-    datasets:[{data:DATA.map(r=>num(r[metric])),borderColor:acc,backgroundColor:g,fill:true,tension:.32,
-      pointRadius:4,pointBackgroundColor:acc,borderWidth:2}]},
-    options:baseOpts({scales:{x:{grid:{display:false},ticks:{color:css('--mut')}},
-      y:{beginAtZero:metric!=='ctr'&&metric!=='cpc',grid:{color:css('--line')},
-         ticks:{color:css('--mut'),callback:v=>M.f(v)}}}})});
 }
 function drawRows(){
   document.getElementById('rows').innerHTML=DATA.map(function(r,i){
@@ -632,7 +587,7 @@ function render(rebuild){
   if(rebuild) buildBar();
   selectData();
   if(!DATA.length){ showEmpty(); return; }
-  drawCards(); drawTrend(); drawRows(); drawDetail();
+  drawCards(); drawRows(); drawDetail();
   drawCamps(); drawConcl(); drawOrganic();
 }
 
@@ -640,12 +595,6 @@ document.getElementById('clientSel').addEventListener('change',function(){
   client=this.value; ls.set('fb_client',client); idx=99; render(true);
 });
 document.getElementById('periodSel').addEventListener('change',function(){ idx=+this.value; widx=99; render(false); });
-document.getElementById('metricPick').addEventListener('click',function(e){
-  const b=e.target.closest('button[data-m]'); if(!b) return;
-  metric=b.dataset.m; ls.set('fb_metric',metric);
-  [].forEach.call(this.children,x=>x.setAttribute('aria-pressed',x===b));
-  drawTrend();
-});
 document.getElementById('orgBody').addEventListener('click',function(e){
   const b=e.target.closest('button[data-od]'); if(!b) return;
   const bi=+b.dataset.blk; orgDaily[bi]=b.dataset.od;
