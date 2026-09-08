@@ -106,12 +106,11 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 .orgh .sp{flex:1}
 .orgt .n{font-size:11.5px;color:var(--mut);margin-top:3px}
 .orgt .v em{font-style:normal;font-size:13px;color:var(--mut);font-weight:600}
-.orgcmp{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-  margin:18px 0 12px;padding-top:15px;border-top:1px solid var(--line)}
-.orgcmp h3{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);font-weight:600}
-.orgd{padding:13px 15px 6px;border-top:1px solid var(--line);background:var(--surf)}
+.orgh{flex-wrap:wrap;gap:6px 0}
+.orgh .pick{margin-left:auto;gap:4px}
+.orgh .pick button{font-size:11.5px;padding:3px 10px;background:var(--surf);font-weight:400}
+.orgd{padding:14px 15px 6px;border-top:1px solid var(--line);background:var(--surf)}
 .orgd canvas{max-height:170px}
-.orgd .pick{margin-bottom:10px}
 .nav{display:inline-flex;gap:4px}
 .nav button{border:1px solid var(--line2);background:transparent;border-radius:8px;
   width:30px;height:30px;cursor:pointer;color:var(--mut);font-size:15px;line-height:1}
@@ -178,10 +177,6 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
       <div><h2>Соцмережі</h2><div class="sub" id="orgSub">профіль і сторінка</div></div>
     </div>
     <div id="orgBody"></div>
-    <div id="orgChartWrap" style="display:none">
-      <div class="orgcmp"><h3>Порівняння періодів</h3><div class="pick" id="orgPick"></div></div>
-      <canvas id="cOrg"></canvas>
-    </div>
   </div>
 
   <div class="card full" id="conclCard">
@@ -280,7 +275,6 @@ let ALL=[], DATA=[], live=false, loadError=false, charts={}, idx=0, widx=0;
 let client = ls.get('fb_client','');
 let gran = 'month';
 let metric = ls.get('fb_metric','spend');
-let orgMetric = null;
 
 const METRICS={
   spend:{l:'Витрати', f:fmtZlR, good:null},
@@ -314,13 +308,6 @@ function orgBlocks(r){
   const o=parseJ(r.organic);
   if(!Array.isArray(o)||!o.length) return [];
   return o.filter(b=>b&&Array.isArray(b.metrics)&&b.metrics.length);
-}
-function orgFlat(r){            // {"Перегляди": {value, delta_pct, unit}}
-  const out={};
-  for(const b of orgBlocks(r))
-    for(const m of b.metrics)
-      if(m&&m.label!=null&&m.value!=null) out[String(m.label).trim()]={v:num(m.value),d:m.delta_pct,u:m.unit||''};
-  return out;
 }
 
 /* ── рендер ──────────────────────────────────────────────── */
@@ -531,11 +518,11 @@ function orgPrevValue(kind,label){
 }
 function drawOrgDaily(b,bi){
   const keys=orgDailyKeys(b);
-  const wrap=document.querySelector('.orgd[data-blk="'+bi+'"]');
-  if(!wrap||!keys.length) return;
+  const pick=document.querySelector('.orgh .pick[data-blk="'+bi+'"]');
+  if(!pick||!keys.length) return;
   if(!orgDaily[bi] || keys.indexOf(orgDaily[bi])<0) orgDaily[bi]=keys[0];
   const cur=orgDaily[bi];
-  wrap.querySelector('.pick').innerHTML=keys.map(function(k){
+  pick.innerHTML=keys.map(function(k){
     return '<button data-od="'+esc(k)+'" data-blk="'+bi+'" aria-pressed="'+(k===cur)+'">'+esc(k)+'</button>';
   }).join('');
   const rows=b.daily.slice().sort(function(a,c){
@@ -591,45 +578,20 @@ function drawOrganic(){
         return '<div class="orgt"><div class="k">'+esc(m.label)+'</div><div class="v">'+
           fmtInt(m.value)+(m.unit?' <em>'+esc(m.unit)+'</em>':'')+'</div>'+d+note+'</div>';
       }).join('');
-      const daily = orgDailyKeys(b).length
-        ? '<div class="orgd" data-blk="'+bi+'"><div class="pick"></div><canvas id="cOrgD'+bi+'"></canvas></div>'
+      const hasDaily = orgDailyKeys(b).length > 0;
+      const daily = hasDaily
+        ? '<div class="orgd" data-blk="'+bi+'"><canvas id="cOrgD'+bi+'"></canvas></div>'
         : '';
+      const pick = hasDaily ? '<div class="pick" data-blk="'+bi+'"></div>' : '';
       return '<div class="org"><div class="orgh"><span class="t">'+
-        esc(b.title||KIND[b.kind]||'Органіка')+'</span>'+
+        esc(b.title||KIND[b.kind]||'Соцмережі')+'</span>'+
         (b.handle?'<span class="h">'+esc(b.handle)+'</span>':'')+
-        '<span class="sp"></span><span>'+esc(b.period_hint||'')+'</span></div>'+
+        '<span class="sp"></span>'+pick+'</div>'+
         '<div class="orgg">'+tiles+'</div>'+daily+'</div>';
     }).join('');
     blocks.forEach(function(b,bi){ drawOrgDaily(b,bi); });
   }
 
-  // порівняння між періодами — тільки якщо метрика є мінімум у двох
-  const counts={};
-  DATA.forEach(function(r){ Object.keys(orgFlat(r)).forEach(function(k){ counts[k]=(counts[k]||0)+1; }); });
-  const chartable=Object.keys(counts).filter(function(k){ return counts[k]>=2; });
-  const pick=document.getElementById('orgPick');
-  const wrap=document.getElementById('orgChartWrap');
-
-  if(!chartable.length){
-    pick.innerHTML=''; wrap.style.display='none';
-    if(charts.org){ charts.org.destroy(); charts.org=null; }
-    return;
-  }
-  if(!orgMetric || chartable.indexOf(orgMetric)<0) orgMetric=chartable[0];
-  pick.innerHTML=chartable.map(function(k){
-    return '<button data-o="'+esc(k)+'" aria-pressed="'+(k===orgMetric)+'">'+esc(k)+'</button>'; }).join('');
-  wrap.style.display='';
-
-  const vals=DATA.map(function(r){ const f=orgFlat(r); return f[orgMetric]?f[orgMetric].v:null; });
-  const ctx=document.getElementById('cOrg');
-  if(charts.org) charts.org.destroy();
-  const acc=css('--acc2');
-  charts.org=new Chart(ctx,{type:'line',data:{labels:DATA.map(labelOf),
-    datasets:[{data:vals,borderColor:acc,backgroundColor:'transparent',borderWidth:2,
-      tension:.32,pointRadius:5,pointBackgroundColor:acc,spanGaps:false}]},
-    options:baseOpts({scales:{x:{grid:{display:false},ticks:{color:css('--mut')}},
-      y:{beginAtZero:true,grid:{color:css('--line')},
-         ticks:{color:css('--mut'),callback:function(v){return fmtInt(v);}}}}})});
 }
 
 /* ── збірка ──────────────────────────────────────────────── */
@@ -683,10 +645,6 @@ document.getElementById('metricPick').addEventListener('click',function(e){
   metric=b.dataset.m; ls.set('fb_metric',metric);
   [].forEach.call(this.children,x=>x.setAttribute('aria-pressed',x===b));
   drawTrend();
-});
-document.getElementById('orgPick').addEventListener('click',function(e){
-  const b=e.target.closest('button[data-o]'); if(!b) return;
-  orgMetric=b.dataset.o; drawOrganic();
 });
 document.getElementById('orgBody').addEventListener('click',function(e){
   const b=e.target.closest('button[data-od]'); if(!b) return;
