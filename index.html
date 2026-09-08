@@ -175,7 +175,7 @@ tbody tr.active{background:var(--surf2);box-shadow:inset 3px 0 0 var(--acc)}
 
   <div class="card full" id="orgCard" style="margin-bottom:16px;display:none">
     <div class="hd">
-      <div><h2>Органіка</h2><div class="sub" id="orgSub">сторінка і профіль — не реклама</div></div>
+      <div><h2>Соцмережі</h2><div class="sub" id="orgSub">профіль і сторінка</div></div>
     </div>
     <div id="orgBody"></div>
     <div id="orgChartWrap" style="display:none">
@@ -516,6 +516,19 @@ function orgDailyKeys(b){
   });
   return Object.keys(seen);
 }
+// значення тієї самої метрики в попередньому періоді
+function orgPrevValue(kind,label){
+  const i=idx-1;
+  if(i<0) return null;
+  const bs=orgBlocks(DATA[i]);
+  for(const b of bs){
+    if((b.kind||'')!==kind) continue;
+    for(const m of (b.metrics||[])){
+      if(String(m.label).trim()===String(label).trim()) return num(m.value);
+    }
+  }
+  return null;
+}
 function drawOrgDaily(b,bi){
   const keys=orgDailyKeys(b);
   const wrap=document.querySelector('.orgd[data-blk="'+bi+'"]');
@@ -556,16 +569,21 @@ function drawOrganic(){
   card.style.display='';
 
   const body=document.getElementById('orgBody');
-  document.getElementById('orgSub').textContent='сторінка і профіль за '+fullLabel(cur)+' — без реклами';
+  document.getElementById('orgSub').textContent='профіль і сторінка за '+fullLabel(cur)+' — разом із трафіком з реклами';
 
   if(!blocks.length){
-    body.innerHTML='<div class="empty">За цей період даних органіки немає.</div>';
+    body.innerHTML='<div class="empty">За цей період даних по соцмережах немає.</div>';
   }else{
     body.innerHTML=blocks.map(function(b,bi){
       const tiles=(b.metrics||[]).slice(0,8).map(function(m){
+        let pp=null;
+        if(m.delta_pct!=null&&m.delta_pct!=='') pp=num(m.delta_pct);
+        else {
+          const prev=orgPrevValue(b.kind||'', m.label);
+          if(prev!=null && prev>0) pp=Math.round((num(m.value)-prev)/prev*1000)/10;
+        }
         let d='';
-        if(m.delta_pct!=null&&m.delta_pct!==''){
-          const pp=num(m.delta_pct);
+        if(pp!=null){
           d='<div class="d '+(pp>0?'up':pp<0?'down':'flat')+'">'+
             (pp>0?'▲ ':pp<0?'▼ ':'– ')+Math.abs(pp)+'%</div>';
         }
