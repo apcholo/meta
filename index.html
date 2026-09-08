@@ -358,12 +358,21 @@ function selectData(){
 }
 function curI(){ return gran==='week' ? widx : idx; }
 function curRow(){ return DATA[curI()]; }
+function niceName(r){
+  try{
+    const b=orgBlocks(r).find(function(x){ return x && x.kind==='facebook' && x.handle; });
+    if(b && b.handle) return b.handle;
+  }catch(e){}
+  return r.business||'';
+}
 function drawCards(){
   const r=curRow(), prev=curI()>0?DATA[curI()-1]:null;
-  document.getElementById('title').textContent='Звіт Facebook Ads — '+(r.business||'flowersbar');
+  document.getElementById('title').textContent='Звіт Facebook Ads — '+niceName(r);
   document.getElementById('sub').textContent=(gran==='week'?'Тиждень: ':'Період: ')+fullLabel(r)+
     (partial(r) ? '  ·  неповний період, лише '+lenDays(r)+' дн.' : '');
-  document.getElementById('mode').textContent=live?'живі дані':'демо-дані';
+  const badge=document.getElementById('mode');
+  badge.textContent = live ? '' : 'демо-дані';
+  badge.style.display = live ? 'none' : '';
   const defs=KPI_ORDER.filter(hasField).map(function(k){
     return [KPI_LABEL[k], METRICS[k].f(r[k]), k];
   });
@@ -483,13 +492,10 @@ function renderText(t){
 function drawConcl(){
   const r=DATA[idx] || {}, card=document.getElementById('conclCard');
   const t=String(r.conclusions||'').trim();
-  const anyText = DATA.some(function(x){ return String(x.conclusions||'').trim(); });
-  if(!t && !anyText){ card.style.display='none'; return; }
+  if(!t){ card.style.display='none'; return; }
   card.style.display='';
   document.getElementById('conclSub').textContent=fullLabel(r);
-  document.getElementById('conclBody').innerHTML = t
-    ? renderText(t)
-    : '<div class="empty">Коментар за цей період ще не додано.</div>';
+  document.getElementById('conclBody').innerHTML=renderText(t);
   const sig=document.getElementById('conclSig');
   const who=String(r.author||'').trim();
   sig.textContent = t ? (who ? who : 'Коментар спеціаліста') : '';
