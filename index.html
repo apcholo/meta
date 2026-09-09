@@ -286,7 +286,7 @@ const ACCENTS=[['#8a5a3b','#c09a6b'],['#6b4a34','#a8845c'],['#7d5a4a','#c2937f']
 /* ── завантаження ────────────────────────────────────────── */
 async function load(){
   try{
-    const r=await fetch(SUPABASE_URL+'/rest/v1/fb_reports?select=*&order=period_start.asc',
+    const r=await fetch(SUPABASE_URL+'/rest/v1/fb_reports?select=*&business=eq.flowersbar_lodz&order=period_start.asc',
       {headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
     const j=await r.json();
     if(Array.isArray(j)){ ALL=normalize(j); live=ALL.length>0; if(ALL.length) return; }
