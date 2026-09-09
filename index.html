@@ -350,7 +350,16 @@ function drawCards(){
     return [KPI_LABEL[k], METRICS[k].f(r[k]), k];
   });
   document.getElementById('cards').innerHTML=defs.map(function(d){
-    return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div></div>';
+    let html='';
+    if(prev){
+      const p=delta(num(r[d[2]]),num(prev[d[2]]));
+      if(p!==null){
+        const g=METRICS[d[2]].good;
+        const cls=(g===null||Math.abs(p)<0.5)?'flat':((g?p>=0:p<0)?'up':'down');
+        html='<div class="d '+cls+'">'+(Math.abs(p)<0.5?'▬':(p>=0?'▲':'▼'))+' '+Math.abs(p)+'%</div>';
+      }
+    }
+    return '<div class="kpi"><div class="k">'+d[0]+'</div><div class="v">'+d[1]+'</div>'+html+'</div>';
   }).join('');
 }
 function baseOpts(extra){
